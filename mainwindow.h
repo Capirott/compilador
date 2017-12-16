@@ -50,7 +50,7 @@ class QPlainTextEdit;
 class QSessionManager;
 QT_END_NAMESPACE
 
-//! [0]
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -67,6 +67,7 @@ private slots:
     void newFile();
     void open();
     bool save();
+    bool compile();
     bool saveAs();
     void about();
     void documentWasModified();
@@ -87,6 +88,6 @@ private:
     QPlainTextEdit *textEdit;
     QString curFile;
 };
-//! [0]
+
 
 #endif
