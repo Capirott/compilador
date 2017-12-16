@@ -1,4 +1,8 @@
 #include <QtWidgets>
+#include <iostream>
+
+using std::cout;
+using std::endl;
 
 #include "mainwindow.h"
 
@@ -72,7 +76,8 @@ bool MainWindow::save()
 
 bool MainWindow::compile()
 {
-    printf("Compiling the program...");
+    char matrix[33][33];
+    cout << "Compiling the program..." << endl;
     return false;
 }
 
