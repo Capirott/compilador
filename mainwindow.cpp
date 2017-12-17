@@ -1,5 +1,7 @@
 #include <QtWidgets>
 #include <iostream>
+#include <sstream>
+#include <map>
 
 using std::cout;
 using std::endl;
@@ -74,10 +76,311 @@ bool MainWindow::save()
     }
 }
 
+inline bool verifyVariable(std::string variable, std::map<std::string, bool> symbols)
+{
+    bool isValid = false;
+    if (variable.back() == '$')
+    {
+        variable.pop_back();
+        if (symbols[variable])
+        {
+            isValid = true;
+        }
+    }
+    return isValid;
+}
+
+inline bool verifyNumber(std::string str)
+{
+    foreach (char ch, str) {
+        if (ch < '0' || ch > '9')
+            return false;
+    }
+    return true;
+}
+
 bool MainWindow::compile()
 {
-    char matrix[33][33];
-    cout << "Compiling the program..." << endl;
+    using std::string;
+    string output;
+    string token;
+    std::stringstream ss(textEdit->toPlainText().toStdString());
+    std::map<string, bool> symbols;
+    int state = 0;
+    while (!ss.eof())
+    {
+        //~ clear the string to avoid empty lines
+        token.clear();
+        ss >> token;
+        //std::cout << state << endl;
+        if (token.length() != 0)
+        {
+            switch (state)
+            {
+            case 0:
+                if (token == "programa")
+                {
+                    output += "#include <stdio.h>\n";
+                    state = 1;
+                }
+                break;
+            case 1:
+                if (token == "var")
+                {
+                    output += "int ";
+                    state = 2;
+                }
+                break;
+            case 2:
+            case 3:
+                if (token.back() == '$')
+                {
+                    token.pop_back();
+                    output += token + ",";
+                    symbols[token] = true;
+                }
+                else if (token == ";")
+                {
+                    if (output.back() == ',')
+                    {
+                        output.pop_back();
+                    }
+                    output += ";\n\nint main()\n{\n";
+                    state = 4;
+                }
+                break;
+            case 4:
+                if (token == "leia")
+                {
+                    output += "\tscanf(\"%d\", ";
+                    state = 5;
+                }
+                break;
+            case 5:
+                if (verifyVariable(token, symbols))
+                {
+                    token.pop_back();
+                    output += token + ");\n";
+                    state = 6;
+                }
+                break;
+            case 6:
+                if (token == "leia")
+                {
+                    output += "\tscanf(\"%d\", ";
+                    state = 5;
+                }
+                else if (token == "escreva")
+                {
+                    output += "\tprintf(\"";
+                    state = 7;
+                }
+            case 7:
+                if (token == "(")
+                {
+                    state = 9;
+                }
+                else if (verifyVariable(token, symbols))
+                {
+                    token.pop_back();
+                    output += "%d\\n\"," + token + ");\n";
+                    state = 8;
+                }
+                break;
+            case 8:
+            case 10:
+                if (token == "leia")
+                {
+                    output += "\tscanf(\"%d\", ";
+                    state = 5;
+                }
+                else if (token == "escreva")
+                {
+                    output += "\tprintf(\"";
+                    state = 7;
+                }
+                else if (token == "at")
+                {
+                    state = 11;
+                }
+                break;
+            case 9:
+                if (token == ")")
+                {
+                    output += "\\n\");\n";
+                    state = 10;
+                }
+                else
+                {
+                    output += token + " ";
+                }
+                break;
+            case 11:
+                if (verifyVariable(token, symbols))
+                {
+                    token.pop_back();
+                    output += "\t" + token;
+                    state = 12;
+                }
+                break;
+            case 12:
+                if (token == "=")
+                {
+                    output += token;
+                    state = 13;
+                }
+                break;
+            case 13:
+                if (verifyVariable(token, symbols))
+                {
+                    token.pop_back();
+                    output += token + ";\n";
+                    state = 15;
+                }
+                else if (verifyNumber(token))
+                {
+                    output += token + ";\n";
+                    state = 14;
+                }
+                break;
+            case 14:
+            case 15:
+                if (token == "at")
+                {
+                    state = 11;
+                }
+                else if (token == "se")
+                {
+                    output += "\tif (";
+                    state = 16;
+                }
+                break;
+            case 16:
+                if (verifyVariable(token, symbols))
+                {
+                    token.pop_back();
+                    output += token;
+                    state = 17;
+                }
+                break;
+            case 17:
+                if (token == ">" || token == "<" || token == ">=" || token == "<=" || token == "!=")
+                {
+                    output += token;
+                    state = 18;
+                }
+                break;
+            case 18:
+                if (verifyVariable(token, symbols))
+                {
+                    token.pop_back();
+                    output += token + ")\n";
+                    state = 20;
+                }
+                else if (verifyNumber(token))
+                {
+                    output += token + ")\n";
+                    state = 19;
+                }
+                break;
+            case 19:
+            case 20:
+                if (token == "entao")
+                {
+                    output += "\t{\n";
+                    state = 21;
+                }
+                break;
+            case 21:
+                if (token == "at")
+                {
+                    state = 22;
+                }
+                break;
+            case 22:
+                if (verifyVariable(token, symbols))
+                {
+                    token.pop_back();
+                    output += "\t\t" + token;
+                    state = 23;
+                }
+                break;
+            case 23:
+                if (token == "=")
+                {
+                    output += token;
+                    state = 24;
+                }
+                break;
+            case 24:
+            case 26:
+                if (verifyVariable(token, symbols))
+                {
+                    token.pop_back();
+                    output += token;
+                    state = 25;
+                }
+                else if (verifyNumber(token))
+                {
+                    output += token;
+                    state = 27;
+                }
+                break;
+            case 25:
+            case 27:
+                if (token == "+" || token == "-" || token == "*")
+                {
+                    output += token;
+                    state = 26;
+                }
+                else if (token == ";")
+                {
+                    output += token + "\n\t}\n";
+                    state = 28;
+                }
+                break;
+               case 28:
+                if (token == "senao")
+                {
+                    output += "\telse\n";
+                    state = 29;
+                }
+                break;
+            case 29:
+                if (token == "escreva")
+                {
+                    output += "\t\tprintf(\"";
+                    state = 30;
+                }
+                break;
+            case 30:
+                if (token == "(")
+                {
+                    state = 31;
+                }
+                break;
+            case 31:
+                if (token == ")")
+                {
+                    output += " \\n\");\n";
+                    state = 32;
+                }
+                else
+                {
+                    output += token;
+                }
+                break;
+            case 32:
+                if (token == "fim")
+                {
+                    output += "\texit(0);\n}";
+                    state = 33;
+                }
+                break;
+            }
+        }
+    }
+    std::cout << "Compiled Program:\n\n\n\n" + output << endl;
     return false;
 }
 
@@ -95,10 +398,10 @@ bool MainWindow::saveAs()
 void MainWindow::about()
 
 {
-   QMessageBox::about(this, tr("About Application"),
-            tr("The <b>Application</b> example demonstrates how to "
-               "write modern GUI applications using Qt, with a menu bar, "
-               "toolbars, and a status bar."));
+    QMessageBox::about(this, tr("About Application"),
+                       tr("The <b>Application</b> example demonstrates how to "
+                          "write modern GUI applications using Qt, with a menu bar, "
+                          "toolbars, and a status bar."));
 }
 
 
@@ -247,10 +550,10 @@ bool MainWindow::maybeSave()
     if (!textEdit->document()->isModified())
         return true;
     const QMessageBox::StandardButton ret
-        = QMessageBox::warning(this, tr("Application"),
-                               tr("The document has been modified.\n"
-                                  "Do you want to save your changes?"),
-                               QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+            = QMessageBox::warning(this, tr("Application"),
+                                   tr("The document has been modified.\n"
+                                      "Do you want to save your changes?"),
+                                   QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
     switch (ret) {
     case QMessageBox::Save:
         return save();

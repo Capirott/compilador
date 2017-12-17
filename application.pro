@@ -10,3 +10,7 @@ RESOURCES     = application.qrc
 # install
 target.path = $$[QT_INSTALL_EXAMPLES]/widgets/mainwindows/application
 INSTALLS += target
+
+DISTFILES += \
+    file.txt \
+    file2.txt
