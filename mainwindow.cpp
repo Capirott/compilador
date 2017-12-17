@@ -2,6 +2,9 @@
 #include <iostream>
 #include <sstream>
 #include <map>
+#include <regex>
+
+#define TAMANHOTABELA 1000 //Quantidade de variaveis suportadas pela linguagem
 
 using std::cout;
 using std::endl;
@@ -76,17 +79,34 @@ bool MainWindow::save()
     }
 }
 
+inline void addVariableToTable(std::string variable)
+{
+    std::string delim = "$";
+    auto start = 0U;
+    auto end = variable.find(delim);
+    while (end != std::string::npos)
+        {
+            std::cout << variable.substr(start, end - start) << std::endl;
+            start = end + delim.length();
+            end = variable.find(delim, start);
+        }
+}
+
 inline bool verifyVariable(std::string variable, std::map<std::string, bool> symbols)
 {
     bool isValid = false;
-    if (variable.back() == '$')
+
+    if(std::regex_match(variable,std::regex("[a-zA-Z]+\\$")))
     {
+        addVariableToTable(variable);
+        isValid = true;
         variable.pop_back();
         if (symbols[variable])
         {
             isValid = true;
         }
     }
+
     return isValid;
 }
 
@@ -101,6 +121,7 @@ inline bool verifyNumber(std::string str)
 
 bool MainWindow::compile()
 {
+    bool hasError = false;
     using std::string;
     string output;
     string token;
@@ -113,7 +134,7 @@ bool MainWindow::compile()
         token.clear();
         ss >> token;
         //std::cout << state << endl;
-        if (token.length() != 0)
+        if (token.length() != 0 && !hasError)
         {
             switch (state)
             {
@@ -122,6 +143,9 @@ bool MainWindow::compile()
                 {
                     output += "#include <stdio.h>\n";
                     state = 1;
+                } else {
+                    QMessageBox::warning(this, tr("Application"),tr("Erro!\nEsperado Id=programa"),QMessageBox::Ok);
+                    hasError = true;
                 }
                 break;
             case 1:
@@ -129,9 +153,16 @@ bool MainWindow::compile()
                 {
                     output += "int ";
                     state = 2;
+                } else {
+                    QMessageBox::warning(this, tr("Application"),tr("Erro!\nEsperado Id=var"),QMessageBox::Ok);
                 }
                 break;
             case 2:
+                if(verifyVariable(token,symbols)) {
+
+                } else {
+                    QMessageBox::warning(this, tr("Application"),tr("Erro!\nVariável inválida"),QMessageBox::Ok);
+                }
             case 3:
                 if (token.back() == '$')
                 {
