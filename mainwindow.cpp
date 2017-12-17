@@ -3,6 +3,7 @@
 #include <sstream>
 #include <map>
 #include <regex>
+#include <vector>
 
 #define TAMANHOTABELA 1000 //Quantidade de variaveis suportadas pela linguagem
 
@@ -79,35 +80,32 @@ bool MainWindow::save()
     }
 }
 
-inline void addVariableToTable(std::string variable)
+inline void addVariableToTable(std::string variable, std::map<std::string, int> symbols)
 {
     std::string delim = "$";
     auto start = 0U;
     auto end = variable.find(delim);
-    while (end != std::string::npos)
-        {
-            std::cout << variable.substr(start, end - start) << std::endl;
-            start = end + delim.length();
-            end = variable.find(delim, start);
-        }
+    symbols.insert(std::pair<std::string, int>(variable.substr(start, end - start),0));
 }
 
-inline bool verifyVariable(std::string variable, std::map<std::string, bool> symbols)
+inline bool verifySemanticRule1(std::string variable)
 {
     bool isValid = false;
 
-    if(std::regex_match(variable,std::regex("[a-zA-Z]+\\$")))
-    {
-        addVariableToTable(variable);
+    if(std::regex_match(variable,std::regex("[a-zA-Z]+\\$;?")))
         isValid = true;
-        variable.pop_back();
-        if (symbols[variable])
-        {
-            isValid = true;
-        }
-    }
-
     return isValid;
+}
+
+inline int verifyVariable(std::string variable, std::map<std::string, int> symbols)
+{
+    if (!(symbols.find(variable) == symbols.end()))
+    {
+        return symbols.find(variable)->second;
+    } else
+    {
+        throw "Variável não encontrada na tabela de simbolos!";
+    }
 }
 
 inline bool verifyNumber(std::string str)
@@ -126,7 +124,7 @@ bool MainWindow::compile()
     string output;
     string token;
     std::stringstream ss(textEdit->toPlainText().toStdString());
-    std::map<string, bool> symbols;
+    std::map<string, int> symbols;
     int state = 0;
     while (!ss.eof())
     {
@@ -158,19 +156,21 @@ bool MainWindow::compile()
                 }
                 break;
             case 2:
-                if(verifyVariable(token,symbols)) {
-
-                } else {
-                    QMessageBox::warning(this, tr("Application"),tr("Erro!\nVariável inválida"),QMessageBox::Ok);
+                if(token.back() == ';')
+                {
+                    state = 3;
                 }
-            case 3:
-                if (token.back() == '$')
+                if(verifySemanticRule1(token))
                 {
                     token.pop_back();
                     output += token + ",";
-                    symbols[token] = true;
+                    symbols.insert(std::pair<std::string, int>(token,0));
+                } else {
+                    QMessageBox::warning(this, tr("Application"),tr("Erro!\nFormato invalido de variavel."),QMessageBox::Ok);
                 }
-                else if (token == ";")
+                break;
+            case 3:
+                if (token == ";")
                 {
                     if (output.back() == ',')
                     {
@@ -178,6 +178,9 @@ bool MainWindow::compile()
                     }
                     output += ";\n\nint main()\n{\n";
                     state = 4;
+                } else
+                {
+                    QMessageBox::warning(this, tr("Application"),tr("Esperado Id=;"),QMessageBox::Ok);
                 }
                 break;
             case 4:
