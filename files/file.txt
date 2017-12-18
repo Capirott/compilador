@@ -1,6 +1,6 @@
 programa
-    var cont1$ cont2$ ;
-    leia cont1$ leia cont2$
+    var cont1$ cont2$ cont3$ cont4$ cont5$ cont6$ cont7$ ;
+    leia cont1$ leia cont2$ leia cont3$ leia cont4$ leia cont5$ leia cont6$ leia cont7$
     escreva ( teste )
     leia cont2$
     escreva ( teste2 )

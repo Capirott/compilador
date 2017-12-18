@@ -36,7 +36,7 @@ MainWindow::MainWindow()
 #endif
 
     setCurrentFile("QString()");
-    loadFile(":/files/file2.txt");
+    loadFile(":/files/file.txt");
     setUnifiedTitleAndToolBarOnMac(true);
 }
 
@@ -106,6 +106,23 @@ inline bool verifyNumber(std::string str)
     return true;
 }
 
+inline bool verifyVariable(std::string &variable, std::map<std::string, int> &symbols)
+{
+
+    if (variable.back() == '$')
+    {
+        if (symbols[variable])
+        {
+            return true;
+        }
+        else
+        {
+            throw std::string("Variável não declarada");
+        }
+    }
+    return false;
+}
+
 bool MainWindow::compile()
 {
     using std::string;
@@ -118,8 +135,8 @@ bool MainWindow::compile()
     {
         while (!ss.eof())
         {
-            //~ clear the string to avoid empty lines
-            token.clear();
+//            //~ clear the string to avoid empty lines
+//            token.clear();
             ss >> token;
             //std::cout << state << endl;
             switch (state)
@@ -194,7 +211,7 @@ bool MainWindow::compile()
                 }
                 break;
             case 5:
-                if (symbols[token])
+                if (verifyVariable(token, symbols))
                 {
                     token.pop_back();
                     output += token + ");\n";
@@ -226,7 +243,7 @@ bool MainWindow::compile()
                 {
                     state = 9;
                 }
-                else if (symbols[token])
+                else if (verifyVariable(token, symbols))
                 {
                     token.pop_back();
                     output += "%d\\n\"," + token + ");\n";
@@ -271,7 +288,7 @@ bool MainWindow::compile()
                 }
                 break;
             case 11:
-                if (symbols[token])
+                if (verifyVariable(token, symbols))
                 {
                     token.pop_back();
                     output += "\t" + token;
@@ -294,7 +311,7 @@ bool MainWindow::compile()
                 }
                 break;
             case 13:
-                if (symbols[token])
+                if (verifyVariable(token, symbols))
                 {
                     token.pop_back();
                     output += token + ";\n";
@@ -327,7 +344,7 @@ bool MainWindow::compile()
                 }
                 break;
             case 16:
-                if (symbols[token])
+                if (verifyVariable(token, symbols))
                 {
                     token.pop_back();
                     output += token;
@@ -350,7 +367,7 @@ bool MainWindow::compile()
                 }
                 break;
             case 18:
-                if (symbols[token])
+                if (verifyVariable(token, symbols))
                 {
                     token.pop_back();
                     output += token + ")\n";
@@ -389,7 +406,7 @@ bool MainWindow::compile()
                 }
                 break;
             case 22:
-                if (symbols[token])
+                if (verifyVariable(token, symbols))
                 {
                     token.pop_back();
                     output += "\t\t" + token;
@@ -413,7 +430,7 @@ bool MainWindow::compile()
                 break;
             case 24:
             case 26:
-                if (symbols[token])
+                if (verifyVariable(token, symbols))
                 {
                     token.pop_back();
                     output += token;
