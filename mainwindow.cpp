@@ -6,8 +6,11 @@
 #include <vector>
 
 #define TAMANHOTABELA 1000 //Quantidade de variaveis suportadas pela linguagem
+#define REGRA0 999
+#define REGRA00 998
 
 using std::cout;
+using std::to_string;
 using std::endl;
 
 #include "mainwindow.h"
@@ -32,7 +35,8 @@ MainWindow::MainWindow()
             this, &MainWindow::commitData);
 #endif
 
-    setCurrentFile(QString());
+    setCurrentFile("QString()");
+    loadFile(":/files/file2.txt");
     setUnifiedTitleAndToolBarOnMac(true);
 }
 
@@ -90,22 +94,7 @@ inline void addVariableToTable(std::string variable, std::map<std::string, int> 
 
 inline bool verifySemanticRule1(std::string variable)
 {
-    bool isValid = false;
-
-    if(std::regex_match(variable,std::regex("[a-zA-Z]+\\$;?")))
-        isValid = true;
-    return isValid;
-}
-
-inline int verifyVariable(std::string variable, std::map<std::string, int> symbols)
-{
-    if (!(symbols.find(variable) == symbols.end()))
-    {
-        return symbols.find(variable)->second;
-    } else
-    {
-        throw "Variável não encontrada na tabela de simbolos!";
-    }
+    return std::regex_match(variable, std::regex("[a-zA-Z][0-9a-zA-Z]*\\$"));
 }
 
 inline bool verifyNumber(std::string str)
@@ -119,21 +108,20 @@ inline bool verifyNumber(std::string str)
 
 bool MainWindow::compile()
 {
-    bool hasError = false;
     using std::string;
     string output;
     string token;
     std::stringstream ss(textEdit->toPlainText().toStdString());
     std::map<string, int> symbols;
     int state = 0;
-    while (!ss.eof())
+    try
     {
-        //~ clear the string to avoid empty lines
-        token.clear();
-        ss >> token;
-        //std::cout << state << endl;
-        if (token.length() != 0 && !hasError)
+        while (!ss.eof())
         {
+            //~ clear the string to avoid empty lines
+            token.clear();
+            ss >> token;
+            //std::cout << state << endl;
             switch (state)
             {
             case 0:
@@ -142,8 +130,7 @@ bool MainWindow::compile()
                     output += "#include <stdio.h>\n";
                     state = 1;
                 } else {
-                    QMessageBox::warning(this, tr("Application"),tr("Erro!\nEsperado Id=programa"),QMessageBox::Ok);
-                    hasError = true;
+                    throw string("Esperado Id=programa");
                 }
                 break;
             case 1:
@@ -152,23 +139,10 @@ bool MainWindow::compile()
                     output += "int ";
                     state = 2;
                 } else {
-                    QMessageBox::warning(this, tr("Application"),tr("Erro!\nEsperado Id=var"),QMessageBox::Ok);
+                    throw string("Esperado Id=var");
                 }
                 break;
             case 2:
-                if(token.back() == ';')
-                {
-                    state = 3;
-                }
-                if(verifySemanticRule1(token))
-                {
-                    token.pop_back();
-                    output += token + ",";
-                    symbols.insert(std::pair<std::string, int>(token,0));
-                } else {
-                    QMessageBox::warning(this, tr("Application"),tr("Erro!\nFormato invalido de variavel."),QMessageBox::Ok);
-                }
-                break;
             case 3:
                 if (token == ";")
                 {
@@ -178,9 +152,34 @@ bool MainWindow::compile()
                     }
                     output += ";\n\nint main()\n{\n";
                     state = 4;
-                } else
+                }
+                else
                 {
-                    QMessageBox::warning(this, tr("Application"),tr("Esperado Id=;"),QMessageBox::Ok);
+                    if (verifySemanticRule1(token))
+                    {
+                        if (symbols.size() < TAMANHOTABELA)
+                        {
+                            //~ Adiciona variavel na tabela
+                            symbols[token] = true;
+                            token.pop_back();
+                            output += token + ",";
+                        }
+                        else
+                        {
+                            throw string("Semantic Error " + to_string(REGRA0) + ": Tabela de Simbolos cheia. Numero de entradas=" + to_string(symbols.size()) + " variaveis\n");
+                        }
+                    }
+                    else
+                    {
+                        if (token.back() == '$')
+                        {
+                            throw string("Variavel invalida");
+                        }
+                        else
+                        {
+                            throw string("Esperando Id=; ou uma variavel");
+                        }
+                    }
                 }
                 break;
             case 4:
@@ -189,13 +188,21 @@ bool MainWindow::compile()
                     output += "\tscanf(\"%d\", ";
                     state = 5;
                 }
+                else
+                {
+                    throw string("Esperando Id=leia");
+                }
                 break;
             case 5:
-                if (verifyVariable(token, symbols))
+                if (symbols[token])
                 {
                     token.pop_back();
                     output += token + ");\n";
                     state = 6;
+                }
+                else
+                {
+                    throw string("Esperando uma variavel");
                 }
                 break;
             case 6:
@@ -209,16 +216,26 @@ bool MainWindow::compile()
                     output += "\tprintf(\"";
                     state = 7;
                 }
+                else
+                {
+                    throw string("Esperado Id=leia ou escreva");
+                }
+                break;
             case 7:
                 if (token == "(")
                 {
                     state = 9;
                 }
-                else if (verifyVariable(token, symbols))
+                else if (symbols[token])
                 {
                     token.pop_back();
                     output += "%d\\n\"," + token + ");\n";
                     state = 8;
+                }
+                else
+                {
+                    cout << "id: " << token << endl;
+                    throw string("Esperado Id=( ou uma variável");
                 }
                 break;
             case 8:
@@ -237,6 +254,10 @@ bool MainWindow::compile()
                 {
                     state = 11;
                 }
+                else
+                {
+                    throw string("Esperado Id=at ou leia ou escreva");
+                }
                 break;
             case 9:
                 if (token == ")")
@@ -250,11 +271,15 @@ bool MainWindow::compile()
                 }
                 break;
             case 11:
-                if (verifyVariable(token, symbols))
+                if (symbols[token])
                 {
                     token.pop_back();
                     output += "\t" + token;
                     state = 12;
+                }
+                else
+                {
+                    throw string("Esperando uma variavel");
                 }
                 break;
             case 12:
@@ -263,9 +288,13 @@ bool MainWindow::compile()
                     output += token;
                     state = 13;
                 }
+                else
+                {
+                    throw string("Esperando id= =");
+                }
                 break;
             case 13:
-                if (verifyVariable(token, symbols))
+                if (symbols[token])
                 {
                     token.pop_back();
                     output += token + ";\n";
@@ -275,6 +304,10 @@ bool MainWindow::compile()
                 {
                     output += token + ";\n";
                     state = 14;
+                }
+                else
+                {
+                    throw string("Esperado um numero inteiro ou uma variável");
                 }
                 break;
             case 14:
@@ -288,13 +321,21 @@ bool MainWindow::compile()
                     output += "\tif (";
                     state = 16;
                 }
+                else
+                {
+                    throw string("Esperando id=se");
+                }
                 break;
             case 16:
-                if (verifyVariable(token, symbols))
+                if (symbols[token])
                 {
                     token.pop_back();
                     output += token;
                     state = 17;
+                }
+                else
+                {
+                    throw string("Esperando uma variavel");
                 }
                 break;
             case 17:
@@ -303,9 +344,13 @@ bool MainWindow::compile()
                     output += token;
                     state = 18;
                 }
+                else
+                {
+                    throw string("Esperado Operadores (<,>,<=,>=,==,!=)");
+                }
                 break;
             case 18:
-                if (verifyVariable(token, symbols))
+                if (symbols[token])
                 {
                     token.pop_back();
                     output += token + ")\n";
@@ -316,6 +361,10 @@ bool MainWindow::compile()
                     output += token + ")\n";
                     state = 19;
                 }
+                else
+                {
+                    throw string("Esperado um numero inteiro ou uma variável");
+                }
                 break;
             case 19:
             case 20:
@@ -324,19 +373,31 @@ bool MainWindow::compile()
                     output += "\t{\n";
                     state = 21;
                 }
+                else
+                {
+                    throw string("Esperando id=senao");
+                }
                 break;
             case 21:
                 if (token == "at")
                 {
                     state = 22;
                 }
+                else
+                {
+                    throw string("Esperando id=at");
+                }
                 break;
             case 22:
-                if (verifyVariable(token, symbols))
+                if (symbols[token])
                 {
                     token.pop_back();
                     output += "\t\t" + token;
                     state = 23;
+                }
+                else
+                {
+                    throw string("Esperando uma variavel");
                 }
                 break;
             case 23:
@@ -345,10 +406,14 @@ bool MainWindow::compile()
                     output += token;
                     state = 24;
                 }
+                else
+                {
+                    throw string("Esperando id= =");
+                }
                 break;
             case 24:
             case 26:
-                if (verifyVariable(token, symbols))
+                if (symbols[token])
                 {
                     token.pop_back();
                     output += token;
@@ -358,6 +423,10 @@ bool MainWindow::compile()
                 {
                     output += token;
                     state = 27;
+                }
+                else
+                {
+                    throw string("Esperado um numero inteiro ou uma variável");
                 }
                 break;
             case 25:
@@ -372,12 +441,20 @@ bool MainWindow::compile()
                     output += token + "\n\t}\n";
                     state = 28;
                 }
+                else
+                {
+                    throw string("Esperado Operacoes (+,-,*) ou ;");
+                }
                 break;
-               case 28:
+            case 28:
                 if (token == "senao")
                 {
                     output += "\telse\n";
                     state = 29;
+                }
+                else
+                {
+                    throw string("Esperando id=senao");
                 }
                 break;
             case 29:
@@ -386,11 +463,19 @@ bool MainWindow::compile()
                     output += "\t\tprintf(\"";
                     state = 30;
                 }
+                else
+                {
+                    throw string("Esperando id=escreva");
+                }
                 break;
             case 30:
                 if (token == "(")
                 {
                     state = 31;
+                }
+                else
+                {
+                    throw string("Esperando id=(");
                 }
                 break;
             case 31:
@@ -410,10 +495,19 @@ bool MainWindow::compile()
                     output += "\texit(0);\n}";
                     state = 33;
                 }
+                else
+                {
+                    throw string("Esperando id=fim");
+                }
                 break;
             }
         }
     }
+    catch (string error)
+    {
+        QMessageBox::warning(this, tr("Compilation error!"),tr(error.c_str()), QMessageBox::Abort);
+    }
+
     std::cout << "Compiled Program:\n\n\n\n" + output << endl;
     return false;
 }

@@ -7,5 +7,7 @@
         <file>images/paste.png</file>
         <file>images/save.png</file>
         <file>images/compile.png</file>
+        <file>files/file.txt</file>
+        <file>files/file2.txt</file>
     </qresource>
 </RCC>
