@@ -177,6 +177,10 @@ bool MainWindow::compile()
                         if (symbols.size() < TAMANHOTABELA)
                         {
                             //~ Adiciona variavel na tabela
+                            if(symbols[token])
+                            {
+                                throw string("Variavel já foi declarada");
+                            }
                             symbols[token] = true;
                             token.pop_back();
                             output += token + ",";
