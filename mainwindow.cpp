@@ -212,7 +212,7 @@ bool MainWindow::compile()
             case 4:
                 if (token == "leia")
                 {
-                    output += "\tscanf(\"%d\", ";
+                    output += "\tscanf(\"%d\", &";
                     state = 5;
                 }
                 else
@@ -235,7 +235,7 @@ bool MainWindow::compile()
             case 6:
                 if (token == "leia")
                 {
-                    output += "\tscanf(\"%d\", ";
+                    output += "\tscanf(\"%d\", &";
                     state = 5;
                 }
                 else if (token == "escreva")
@@ -269,7 +269,7 @@ bool MainWindow::compile()
             case 10:
                 if (token == "leia")
                 {
-                    output += "\tscanf(\"%d\", ";
+                    output += "\tscanf(\"%d\", &";
                     state = 5;
                 }
                 else if (token == "escreva")
