@@ -6,8 +6,10 @@
 #include <vector>
 
 #define TAMANHOTABELA 1000 //Quantidade de variaveis suportadas pela linguagem
+#define TAMANHOVARIAVEL 255
 #define REGRA0 999
 #define REGRA00 998
+
 
 using std::cout;
 using std::to_string;
@@ -161,7 +163,7 @@ bool MainWindow::compile()
                 break;
             case 2:
             case 3:
-                if (token == ";" || token.back() == ';')
+                if (token == ";")
                 {
                     if (output.back() == ',')
                     {
@@ -174,6 +176,10 @@ bool MainWindow::compile()
                 {
                     if (verifySemanticRule1(token))
                     {
+                        if (token.back() == '$' && token.length() > TAMANHOVARIAVEL)
+                        {
+                            throw string("Semantic Error " + to_string(REGRA00) + ": Variavel " + token + " com nome muito grande. (MAX=" + to_string(TAMANHOVARIAVEL) + "\n");
+                        }
                         if (symbols.size() < TAMANHOTABELA)
                         {
                             //~ Adiciona variavel na tabela
@@ -232,7 +238,7 @@ bool MainWindow::compile()
                     output += "\tscanf(\"%d\", ";
                     state = 5;
                 }
-                else if (token == "escreva" || token == "escreva(")
+                else if (token == "escreva")
                 {
                     output += "\tprintf(\"";
                     state = 7;
