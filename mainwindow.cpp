@@ -161,7 +161,7 @@ bool MainWindow::compile()
                 break;
             case 2:
             case 3:
-                if (token == ";")
+                if (token == ";" || token.back() == ';')
                 {
                     if (output.back() == ',')
                     {
@@ -232,7 +232,7 @@ bool MainWindow::compile()
                     output += "\tscanf(\"%d\", ";
                     state = 5;
                 }
-                else if (token == "escreva")
+                else if (token == "escreva" || token == "escreva(")
                 {
                     output += "\tprintf(\"";
                     state = 7;
