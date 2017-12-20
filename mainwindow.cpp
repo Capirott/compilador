@@ -529,13 +529,17 @@ bool MainWindow::compile()
                 break;
             }
         }
+
+        //system("C:\\Users\\erick\\Desktop\\qtenv2.bat");
+        textEdit->setPlainText(tr(output.c_str()));
+        //std::cout << "Compiled Program:\n" + output << endl;
+        //QMessageBox::warning(this, tr("Compilation success!"),tr(output.c_str()), QMessageBox::Ok);
     }
     catch (string error)
     {
         QMessageBox::warning(this, tr("Compilation error!"),tr(error.c_str()), QMessageBox::Abort);
     }
 
-    std::cout << "Compiled Program:\n\n\n\n" + output << endl;
     return false;
 }
 
